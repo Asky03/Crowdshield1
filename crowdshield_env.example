@@ -1,0 +1,40 @@
+# CrowdShield Backend — Environment Template
+# ─────────────────────────────────────────────────────────────────
+# HOW TO USE THIS FILE:
+#   Windows:  copy .env.example .env
+#   Mac/Linux: cp .env.example .env
+#   Then open .env and replace every placeholder with your real value.
+#   NEVER commit .env to git. Only commit this .env.example file.
+# ─────────────────────────────────────────────────────────────────
+
+# Server
+PORT=5000
+NODE_ENV=development
+
+# ── Supabase ─────────────────────────────────────────────────────
+# Find at: supabase.com → your project → Settings (gear) → API
+SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+SUPABASE_ANON_KEY=YOUR_ANON_PUBLIC_KEY_HERE
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_SECRET_KEY_HERE
+# Find at: Settings → API → JWT Settings → Legacy JWT Secret tab
+SUPABASE_JWT_SECRET=YOUR_LEGACY_JWT_SECRET_HERE
+
+# ── AWS ──────────────────────────────────────────────────────────
+# Find at: AWS Console → IAM → Users → crowdshield-backend → Security credentials
+# WARNING: Use IAM user keys ONLY. Never paste root account keys here.
+AWS_ACCESS_KEY_ID=YOUR_IAM_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY=YOUR_IAM_SECRET_ACCESS_KEY
+# Must match the region where you created your S3 bucket
+# Examples: us-east-1  eu-west-1  ap-south-1  us-west-2
+AWS_REGION=us-east-1
+
+# Find at: AWS Console → S3 → your bucket name (copy exactly)
+AWS_S3_BUCKET=crowdshield-media
+
+# Find at: AWS Console → SNS → Topics → crowdshield-alerts → copy ARN
+AWS_SNS_TOPIC_ARN=arn:aws:sns:us-east-1:YOUR_ACCOUNT_ID:crowdshield-alerts
+
+# ── ML Service ───────────────────────────────────────────────────
+# Keep as-is for local development
+ML_SERVICE_URL=http://localhost:8000
+MAX_FILE_SIZE_MB=100

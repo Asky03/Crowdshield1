@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CrowdShield — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f1a;--surface:#141624;--surface2:#1c1f35;--border:#252842;
+  --text:#e2e8f0;--muted:#8892a4;--accent:#4f8ef7;--accent2:#7c6af7;
+  --low:#22c55e;--medium:#f59e0b;--high:#ef4444;--critical:#dc2626;
+  --low-bg:#052e16;--medium-bg:#451a03;--high-bg:#450a0a;--critical-bg:#3b0000;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;
+        display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:100}
+.logo{font-size:1.2rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:1rem}
+.user-chip{background:var(--surface2);border:1px solid var(--border);border-radius:999px;
+           padding:.3rem .9rem;font-size:.8rem;color:var(--muted)}
+.pill{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:#ef4444}
+.dot.ok{background:#22c55e;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.5}}
+button{cursor:pointer;border:none;font-family:inherit;font-size:.9rem}
+.btn{background:var(--accent);color:#fff;border-radius:8px;padding:.55rem 1.2rem;font-weight:600;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.45rem .9rem}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{background:#7f1d1d;color:#fca5a5}
+
+/* ── LAYOUT ── */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}
+#app-screen{display:none}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);
+          height:calc(100vh - 53px);position:fixed;top:53px;left:0;overflow-y:auto;padding:1rem 0}
+.main-content{margin-left:220px;padding:1.5rem;min-height:calc(100vh - 53px)}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.6rem 1.2rem;color:var(--muted);
+           font-size:.9rem;cursor:pointer;border-radius:0;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface2);color:var(--accent);border-left-color:var(--accent)}
+.nav-icon{font-size:1rem;width:20px;text-align:center}
+.nav-section{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
+              padding:.8rem 1.2rem .3rem;margin-top:.5rem}
+
+/* ── PAGES ── */
+.page{display:none}.page.active{display:block}
+.page-title{font-size:1.4rem;font-weight:700;margin-bottom:1.5rem;color:#fff}
+
+/* ── AUTH CARD ── */
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+            padding:2.5rem;width:100%;max-width:420px}
+.auth-logo{text-align:center;margin-bottom:2rem}
+.auth-logo h1{font-size:2rem;font-weight:800}
+.auth-logo p{color:var(--muted);font-size:.9rem;margin-top:.3rem}
+.form-group{margin-bottom:1rem}
+label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:.35rem;font-weight:500}
+input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{
+  width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+  padding:.65rem .9rem;border-radius:8px;font-size:.9rem;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,142,247,.15)}
+.err-msg{color:#f87171;font-size:.82rem;margin-top:.5rem;display:none}
+.auth-toggle{text-align:center;margin-top:1rem;font-size:.85rem;color:var(--muted)}
+.auth-toggle a{cursor:pointer}
+
+/* ── STAT CARDS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem}
+.stat-label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+.stat-val{font-size:2rem;font-weight:700;color:#fff}
+.stat-sub{font-size:.78rem;color:var(--muted);margin-top:.2rem}
+.stat-card.critical{border-color:#7f1d1d;background:#0f0505}
+.stat-card.high{border-color:#78350f;background:#0c0800}
+
+/* ── RISK BADGE ── */
+.badge{display:inline-flex;align-items:center;padding:.2rem .65rem;border-radius:999px;
+        font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.badge-low{background:var(--low-bg);color:var(--low)}
+.badge-medium{background:var(--medium-bg);color:var(--medium)}
+.badge-high{background:var(--high-bg);color:var(--high)}
+.badge-critical{background:var(--critical-bg);color:var(--critical);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.2rem}
+.card-title{font-size:.9rem;font-weight:600;color:#fff;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{text-align:left;padding:.6rem .8rem;color:var(--muted);font-weight:500;font-size:.78rem;
+   text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+td{padding:.7rem .8rem;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.empty-row{text-align:center;padding:2rem;color:var(--muted)}
+
+/* ── UPLOAD ZONE ── */
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:2.5rem;text-align:center;
+            cursor:pointer;transition:all .2s;background:var(--bg)}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:rgba(79,142,247,.05)}
+.drop-icon{font-size:2.5rem;margin-bottom:.7rem}
+.drop-zone strong{display:block;color:#fff;margin-bottom:.3rem}
+.drop-zone p{color:var(--muted);font-size:.83rem}
+.file-selected{color:var(--accent);font-size:.85rem;margin-top:.6rem;font-weight:500}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap{background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin:.8rem 0}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+               border-radius:999px;transition:width .3s;width:0}
+
+/* ── RESULT PANEL ── */
+.result-panel{display:none;background:var(--surface2);border:1px solid var(--border);
+               border-radius:12px;padding:1.2rem;margin-top:1rem}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.8rem;margin-top:.8rem}
+.result-item{background:var(--bg);border-radius:8px;padding:.8rem;text-align:center}
+.result-val{font-size:1.5rem;font-weight:700;color:var(--accent)}
+.result-key{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+
+/* ── CHART ── */
+.chart-wrap{position:relative;height:220px}
+
+/* ── HEATMAP MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;
+                align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+        padding:1.5rem;max-width:700px;width:90%;max-height:90vh;overflow:auto}
+.modal-title{font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+.modal img{width:100%;border-radius:8px;margin-bottom:1rem}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;font-size:.83rem}
+.meta-item{background:var(--bg);border-radius:6px;padding:.5rem .7rem}
+.meta-key{color:var(--muted);font-size:.72rem;margin-bottom:.2rem}
+.meta-val{color:#fff;font-weight:500}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;border:1px solid var(--border);
+        padding:.75rem 1.2rem;border-radius:10px;font-size:.88rem;display:none;z-index:999;
+        box-shadow:0 4px 24px rgba(0,0,0,.4)}
+
+/* ── SERVICE STATUS BAR ── */
+.svc-bar{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.svc-chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;
+           padding:.3rem .8rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem}
+.svc-dot{width:7px;height:7px;border-radius:50%}
+.svc-ok{background:#22c55e}.svc-warn{background:#f59e0b}.svc-err{background:#ef4444}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1><span style="background:linear-gradient(135deg,#4f8ef7,#7c6af7);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CrowdShield</span></h1>
+      <p>Crowd Safety Monitoring System</p>
+    </div>
+    <div id="reg-name-group" class="form-group" style="display:none">
+      <label>Full Name</label>
+      <input type="text" id="inp-name" placeholder="Your name"/>
+    </div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="inp-email" placeholder="you@example.com"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="inp-pass" placeholder="Min 8 chars, 1 uppercase, 1 number"
+             onkeydown="if(event.key==='Enter')authAction()"/>
+    </div>
+    <div class="err-msg" id="auth-err"></div>
+    <button class="btn" id="auth-btn" style="width:100%;margin-top:.5rem" onclick="authAction()">Login</button>
+    <div class="auth-toggle">
+      <a onclick="toggleAuth()" id="auth-switch">Don't have an account? Register</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     APP SCREEN
+══════════════════════════════════════════════════════════ -->
+<div id="app-screen">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="logo"> <span>CrowdShield</span></div>
+    <div class="pill"><div class="dot" id="top-dot"></div><span id="top-status">connecting...</span></div>
+    <div class="topbar-right">
+      <div class="user-chip" id="user-chip">—</div>
+      <button class="btn-ghost" onclick="logout()" style="font-size:.8rem;padding:.3rem .8rem">Logout</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('upload')" id="nav-upload">
+      <span class="nav-icon">📤</span> Upload & Analyze
+    </div>
+    <div class="nav-section">Data</div>
+    <div class="nav-item" onclick="showPage('history')" id="nav-history">
+      <span class="nav-icon">🗂️</span> History
+    </div>
+    <div class="nav-item" onclick="showPage('alerts')" id="nav-alerts">
+      <span class="nav-icon">🚨</span> High Risk Events
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main-content">
+
+    <!-- ── DASHBOARD PAGE ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">Dashboard Overview</div>
+
+      <!-- Service status bar -->
+      <div class="svc-bar" id="svc-bar">
+        <div class="svc-chip"><div class="svc-dot svc-warn" id="svc-db"></div> Database</div>
+        <div class="svc-chip"><div class="svc-dot svc-warn" id="svc-ml"></div> ML Service</div>
+        <div class="svc-chip"><div class="svc-dot svc-warn" id="svc-s3"></div> S3 Storage</div>
+        <div class="svc-chip"><div class="svc-dot svc-warn" id="svc-sns"></div> SNS Alerts</div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total Analyses</div><div class="stat-val" id="st-total">—</div><div class="stat-sub">All time</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Crowd Count</div><div class="stat-val" id="st-avg">—</div><div class="stat-sub">People per analysis</div></div>
+        <div class="stat-card"><div class="stat-label">Peak Crowd</div><div class="stat-val" id="st-peak">—</div><div class="stat-sub">Highest recorded</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Risk Score</div><div class="stat-val" id="st-score">—</div><div class="stat-sub">Out of 100</div></div>
+        <div class="stat-card high"><div class="stat-label">High Risk</div><div class="stat-val" style="color:var(--high)" id="st-high">—</div><div class="stat-sub">Events</div></div>
+        <div class="stat-card critical"><div class="stat-label">Critical</div><div class="stat-val" style="color:var(--critical)" id="st-critical">—</div><div class="stat-sub">Events</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <!-- Risk distribution chart -->
+        <div class="card">
+          <div class="card-title">Risk Distribution <button class="btn-ghost" onclick="refreshDashboard()" style="font-size:.75rem;padding:.2rem .6rem">↻ Refresh</button></div>
+          <div class="chart-wrap"><canvas id="riskChart"></canvas></div>
+        </div>
+        <!-- 7-day trend chart -->
+        <div class="card">
+          <div class="card-title">7-Day Trend</div>
+          <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Recent analyses -->
+      <div class="card">
+        <div class="card-title">Recent Analyses <button class="btn-ghost" onclick="loadRecent()" style="font-size:.75rem;padding:.2rem .6rem">↻ Refresh</button></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>File</th><th>Type</th><th>Location</th><th>People</th><th>Risk</th><th>Score</th><th></th></tr></thead>
+            <tbody id="recent-tbody"><tr><td colspan="8" class="empty-row">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── UPLOAD PAGE ── -->
+    <div class="page" id="page-upload">
+      <div class="page-title">Upload & Analyze</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+        <div>
+          <div class="card">
+            <div class="card-title">Media Upload</div>
+            <div class="drop-zone" id="drop-zone"
+                 onclick="document.getElementById('file-inp').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag')"
+                 ondragleave="this.classList.remove('drag')"
+                 ondrop="handleDrop(event)">
+              <div class="drop-icon">📁</div>
+              <strong>Click or drag & drop</strong>
+              <p>Images: JPG, PNG, WEBP &nbsp;|&nbsp; Videos: MP4, AVI, MOV</p>
+              <p>Maximum file size: 100 MB</p>
+              <div class="file-selected" id="file-name"></div>
+            </div>
+            <input type="file" id="file-inp" style="display:none" accept="image/*,video/*" onchange="fileSelected(this)"/>
+
+            <div class="form-group" style="margin-top:1rem">
+              <label>Location Tag (optional)</label>
+              <input type="text" id="inp-location" placeholder="e.g. Main Gate, Section A, Entrance 3"/>
+            </div>
+
+            <div class="progress-wrap" id="prog-wrap" style="display:none">
+              <div class="progress-bar" id="prog-bar"></div>
+            </div>
+            <div id="upload-status" style="font-size:.83rem;color:var(--muted);margin-top:.4rem;min-height:1.2rem"></div>
+
+            <div style="display:flex;gap:.7rem;margin-top:.8rem">
+              <button class="btn" id="upload-btn" onclick="uploadFile()" disabled style="flex:1">
+                Analyze Media
+              </button>
+              <button class="btn-ghost" onclick="clearUpload()">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result panel -->
+        <div>
+          <div class="result-panel" id="result-panel">
+            <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.5rem">
+              <span style="font-weight:700;color:#fff">Analysis Result</span>
+              <span class="badge" id="res-badge">—</span>
+              <span id="res-note" style="font-size:.75rem;color:var(--muted);margin-left:auto"></span>
+            </div>
+            <div class="result-grid">
+              <div class="result-item"><div class="result-val" id="res-count">—</div><div class="result-key">People Detected</div></div>
+              <div class="result-item"><div class="result-val" id="res-score">—</div><div class="result-key">Risk Score /100</div></div>
+              <div class="result-item"><div class="result-val" id="res-density">—</div><div class="result-key">Density</div></div>
+              <div class="result-item"><div class="result-val" id="res-conf">—</div><div class="result-key">Confidence</div></div>
+              <div class="result-item"><div class="result-val" id="res-time">—</div><div class="result-key">Process Time</div></div>
+              <div class="result-item"><div class="result-val" id="res-heatmap">—</div><div class="result-key">Heatmap</div></div>
+            </div>
+            <button class="btn-ghost" id="view-detail-btn" onclick="" style="width:100%;margin-top:.8rem;font-size:.82rem">
+              View Full Detail →
+            </button>
+          </div>
+
+          <div class="card" style="margin-top:0" id="tips-card">
+            <div class="card-title">Analysis Tips</div>
+            <div style="font-size:.83rem;color:var(--muted);line-height:1.7">
+              <p>📸 <strong style="color:var(--text)">Images</strong> — JPG or PNG of a crowd. Works best with overhead or angled shots where people are visible.</p>
+              <br>
+              <p>🎬 <strong style="color:var(--text)">Videos</strong> — MP4 up to 100MB. The system samples every 15th frame and also detects crowd movement using optical flow.</p>
+              <br>
+              <p>🌡️ <strong style="color:var(--text)">Heatmap</strong> — Generated automatically when ML service is running. Shows hotspot zones overlaid on the original image.</p>
+              <br>
+              <p>📍 <strong style="color:var(--text)">Location Tag</strong> — Add a location so you can filter results by zone later.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HISTORY PAGE ── -->
+    <div class="page" id="page-history">
+      <div class="page-title">Analysis History</div>
+
+      <div class="card">
+        <div class="card-title">
+          All Analyses
+          <div style="display:flex;gap:.6rem;align-items:center">
+            <select id="filter-risk" onchange="loadHistory()" style="font-size:.8rem;padding:.3rem .6rem;border-radius:6px">
+              <option value="">All Risk Levels</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+            <button class="btn-ghost" onclick="loadHistory()" style="font-size:.78rem;padding:.3rem .7rem">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date/Time</th><th>File</th><th>Type</th><th>Location</th><th>People</th><th>Density</th><th>Risk</th><th>Score</th><th>Action</th></tr></thead>
+            <tbody id="history-tbody"><tr><td colspan="9" class="empty-row">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;font-size:.83rem;color:var(--muted)">
+          <span id="hist-count">—</span>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn-ghost" id="hist-prev" onclick="histPage(-1)" style="font-size:.8rem;padding:.3rem .7rem">← Prev</button>
+            <button class="btn-ghost" id="hist-next" onclick="histPage(1)"  style="font-size:.8rem;padding:.3rem .7rem">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ALERTS PAGE ── -->
+    <div class="page" id="page-alerts">
+      <div class="page-title">🚨 High Risk Events</div>
+      <div class="card">
+        <div class="card-title">Critical & High Risk Analyses</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date/Time</th><th>File</th><th>Location</th><th>People</th><th>Risk</th><th>Score</th><th>Action</th></tr></thead>
+            <tbody id="alerts-tbody"><tr><td colspan="7" class="empty-row">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app-screen -->
+
+<!-- ── DETAIL MODAL ── -->
+<div class="modal-overlay" id="detail-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-filename">Analysis Detail</span>
+      <button class="btn-ghost" onclick="closeModal()" style="padding:.3rem .7rem;font-size:.85rem">✕ Close</button>
+    </div>
+    <div id="modal-heatmap-wrap" style="display:none">
+      <p style="font-size:.8rem;color:var(--muted);margin-bottom:.4rem">Density Heatmap</p>
+      <img id="modal-heatmap" src="" alt="Heatmap"/>
+    </div>
+    <div class="meta-grid" id="modal-meta"></div>
+    <div id="modal-flow" style="margin-top:1rem;display:none">
+      <p style="font-size:.8rem;color:var(--muted);margin-bottom:.4rem">Top Flow Vectors (crowd movement)</p>
+      <div id="modal-flow-list" style="font-size:.78rem;color:var(--muted);max-height:120px;overflow:auto"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════ -->
+<script>
+const API = 'http://localhost:5000/api';
+let TOKEN = localStorage.getItem('cs_token');
+let currentUser = null;
+let isRegMode = false;
+let selectedFile = null;
+let histOffset = 0;
+const HIST_LIMIT = 15;
+let riskChartInst = null;
+let trendChartInst = null;
+let lastAnalysisId = null;
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+window.onload = () => {
+  if (TOKEN) initApp();
+};
+
+async function initApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  checkHealth();
+  refreshDashboard();
+  if (currentUser) document.getElementById('user-chip').textContent = currentUser.email;
+}
+
+// ════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════
+function toggleAuth() {
+  isRegMode = !isRegMode;
+  document.getElementById('auth-btn').textContent = isRegMode ? 'Create Account' : 'Login';
+  document.getElementById('auth-switch').textContent = isRegMode ? 'Already have an account? Login' : "Don't have an account? Register";
+  document.getElementById('reg-name-group').style.display = isRegMode ? 'block' : 'none';
+  clearErr();
+}
+
+function clearErr() { const e = document.getElementById('auth-err'); e.style.display='none'; e.textContent=''; }
+function showErr(msg) { const e = document.getElementById('auth-err'); e.textContent=msg; e.style.display='block'; }
+
+async function authAction() {
+  clearErr();
+  const email = document.getElementById('inp-email').value.trim();
+  const password = document.getElementById('inp-pass').value;
+  const name = document.getElementById('inp-name').value.trim();
+
+  if (!email || !password) { showErr('Email and password are required'); return; }
+
+  const btn = document.getElementById('auth-btn');
+  btn.disabled = true;
+  btn.textContent = isRegMode ? 'Creating account...' : 'Logging in...';
+
+  try {
+    const endpoint = isRegMode ? '/auth/register' : '/auth/login';
+    const body = isRegMode ? { email, password, name } : { email, password };
+    const r = await fetch(`${API}${endpoint}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { showErr(d.error || d.errors?.[0]?.msg || 'Authentication failed'); return; }
+
+    // Get token — register returns session, login returns access_token
+    TOKEN = d.access_token || d.session?.access_token;
+    if (!TOKEN) { showErr('No session returned — check Supabase email confirmation is disabled'); return; }
+
+    localStorage.setItem('cs_token', TOKEN);
+    currentUser = d.user;
+    document.getElementById('user-chip').textContent = d.user.email;
+    initApp();
+  } catch(e) {
+    showErr('Network error — is the backend running on port 5000?');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = isRegMode ? 'Create Account' : 'Login';
+  }
+}
+
+function logout() {
+  TOKEN = null; currentUser = null;
+  localStorage.removeItem('cs_token');
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+// ════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'history') loadHistory();
+  if (name === 'alerts')  loadAlerts();
+}
+
+// ════════════════════════════════════════════════
+// HEALTH CHECK
+// ════════════════════════════════════════════════
+async function checkHealth() {
+  try {
+    const r = await fetch(`${API}/health`);
+    const d = await r.json();
+    const ok = d.status === 'ok';
+    const dot = document.getElementById('top-dot');
+    dot.className = 'dot' + (ok ? ' ok' : '');
+    document.getElementById('top-status').textContent = ok ? 'All systems' : 'Degraded';
+
+    const svcMap = { db: d.services?.database, ml: d.services?.mlService, s3: d.services?.s3, sns: d.services?.sns };
+    const connectedWords = new Set(['connected', 'online', 'configured']);
+    for (const [k, v] of Object.entries(svcMap)) {
+      const el = document.getElementById('svc-' + k);
+      if (el) el.className = 'svc-dot ' + (connectedWords.has(v) ? 'svc-ok' : 'svc-err');
+    }
+  } catch {
+    document.getElementById('top-status').textContent = 'Backend offline';
+  }
+}
+
+// ════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════
+async function refreshDashboard() {
+  checkHealth();
+  try {
+    const r = await authFetch('/analysis/stats/summary');
+    const d = await r.json();
+    if (!r.ok || !d.totalAnalyses) {
+      ['st-total','st-avg','st-peak','st-score','st-high','st-critical'].forEach(id => {
+        document.getElementById(id).textContent = '0';
+      });
+      buildRiskChart({ Low:0, Medium:0, High:0, Critical:0 });
+      buildTrendChart([]);
+    } else {
+      document.getElementById('st-total').textContent = d.totalAnalyses;
+      document.getElementById('st-avg').textContent = d.averageCrowdCount;
+      document.getElementById('st-peak').textContent = d.maxCrowdCount;
+      document.getElementById('st-score').textContent = d.averageRiskScore;
+      document.getElementById('st-high').textContent = d.riskDistribution?.High || 0;
+      document.getElementById('st-critical').textContent = d.riskDistribution?.Critical || 0;
+      buildRiskChart(d.riskDistribution || {});
+      buildTrendChart(d.trend || []);
+    }
+  } catch(e) { console.warn('Dashboard load failed', e); }
+  loadRecent();
+}
+
+async function loadRecent() {
+  try {
+    const r = await authFetch('/analysis?limit=8');
+    const d = await r.json();
+    const tbody = document.getElementById('recent-tbody');
+    if (!d.results?.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-row">No analyses yet. Upload something to get started.</td></tr>'; return; }
+    tbody.innerHTML = d.results.map(row => `
+      <tr>
+        <td style="color:var(--muted)">${fmtDate(row.created_at)}</td>
+        <td title="${row.original_filename}">${truncate(row.original_filename,22)}</td>
+        <td><span style="font-size:.75rem;background:var(--surface2);padding:.1rem .5rem;border-radius:4px">${row.file_type}</span></td>
+        <td style="color:var(--muted)">${row.location || '—'}</td>
+        <td style="font-weight:600">${row.crowd_count}</td>
+        <td><span class="badge badge-${(row.risk_level||'').toLowerCase()}">${row.risk_level}</span></td>
+        <td>${row.risk_score}</td>
+        <td><button class="btn-ghost" onclick="openDetail('${row.id}')" style="font-size:.75rem;padding:.2rem .6rem">Detail</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { console.warn('Recent load failed', e); }
+}
+
+function buildRiskChart(dist) {
+  const ctx = document.getElementById('riskChart').getContext('2d');
+  if (riskChartInst) riskChartInst.destroy();
+  riskChartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Low', 'Medium', 'High', 'Critical'],
+      datasets: [{ data: [dist.Low||0, dist.Medium||0, dist.High||0, dist.Critical||0],
+                   backgroundColor: ['#052e16','#451a03','#450a0a','#3b0000'],
+                   borderColor: ['#22c55e','#f59e0b','#ef4444','#dc2626'],
+                   borderWidth: 2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+               plugins: { legend: { labels: { color:'#8892a4', font:{ size:11 } } } } }
+  });
+}
+
+function buildTrendChart(trend) {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if (trendChartInst) trendChartInst.destroy();
+  const labels = trend.map(t => t.day).reverse();
+  const counts  = trend.map(t => t.avg_count).reverse();
+  trendChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Avg Crowd Count',
+        data: counts,
+        borderColor: '#4f8ef7',
+        backgroundColor: 'rgba(79,142,247,.1)',
+        tension: .4, fill: true,
+        pointBackgroundColor: '#4f8ef7',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { color:'#8892a4', font:{size:10} }, grid: { color:'#252842' } },
+        y: { ticks: { color:'#8892a4', font:{size:10} }, grid: { color:'#252842' } }
+      },
+      plugins: { legend: { labels: { color:'#8892a4', font:{size:11} } } }
+    }
+  });
+}
+
+// ════════════════════════════════════════════════
+// UPLOAD
+// ════════════════════════════════════════════════
+function fileSelected(input) {
+  selectedFile = input.files[0];
+  document.getElementById('file-name').textContent = '✓ ' + selectedFile.name;
+  document.getElementById('upload-btn').disabled = false;
+  document.getElementById('tips-card').style.display = 'none';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) { selectedFile = f; document.getElementById('file-name').textContent = '✓ ' + f.name; document.getElementById('upload-btn').disabled = false; }
+}
+
+function clearUpload() {
+  selectedFile = null;
+  document.getElementById('file-name').textContent = '';
+  document.getElementById('upload-btn').disabled = true;
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('upload-status').textContent = '';
+  document.getElementById('prog-wrap').style.display = 'none';
+  document.getElementById('tips-card').style.display = 'block';
+  document.getElementById('file-inp').value = '';
+}
+
+async function uploadFile() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('upload-btn');
+  const status = document.getElementById('upload-status');
+  const progWrap = document.getElementById('prog-wrap');
+  const progBar = document.getElementById('prog-bar');
+
+  btn.disabled = true; btn.textContent = 'Uploading...';
+  progWrap.style.display = 'block';
+  progBar.style.width = '20%';
+  status.textContent = '⏳ Uploading file...';
+
+  const form = new FormData();
+  form.append('media', selectedFile);
+  const loc = document.getElementById('inp-location').value.trim();
+  if (loc) form.append('location', loc);
+
+  try {
+    progBar.style.width = '50%';
+    status.textContent = '🔍 Running crowd analysis...';
+
+    const r = await fetch(`${API}/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}` },
+      body: form,
+    });
+    const d = await r.json();
+
+    progBar.style.width = '100%';
+
+    if (!r.ok) {
+      status.textContent = `❌ Error: ${d.error}`;
+      toast('Upload failed: ' + d.error, true);
+      return;
+    }
+
+    status.textContent = `✅ Done in ${d.result.processingTimeMs}ms`;
+    lastAnalysisId = d.analysisId;
+    showResult(d.result);
+    toast('Analysis complete!');
+    refreshDashboard();
+  } catch(e) {
+    status.textContent = '❌ Network error — is backend running?';
+    toast('Network error', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Analyze Media';
+  }
+}
+
+function showResult(r) {
+  const panel = document.getElementById('result-panel');
+  panel.style.display = 'block';
+  const badge = document.getElementById('res-badge');
+  badge.textContent = r.riskLevel;
+  badge.className = 'badge badge-' + (r.riskLevel||'').toLowerCase();
+  document.getElementById('res-count').textContent = r.crowdCount;
+  document.getElementById('res-score').textContent = r.riskScore;
+  document.getElementById('res-density').textContent = (r.density||'').toUpperCase();
+  document.getElementById('res-conf').textContent = r.confidence > 0 ? (r.confidence*100).toFixed(0)+'%' : 'N/A';
+  document.getElementById('res-time').textContent = r.processingTimeMs + 'ms';
+  document.getElementById('res-heatmap').textContent = r.hasHeatmap ? '✓ Yes' : '—';
+  document.getElementById('res-note').textContent = r.confidence === 0 ? '(mock result — ML offline)' : '';
+  if (lastAnalysisId) {
+    document.getElementById('view-detail-btn').onclick = () => openDetail(lastAnalysisId);
+  }
+}
+
+// ════════════════════════════════════════════════
+// HISTORY
+// ════════════════════════════════════════════════
+async function loadHistory() {
+  const risk = document.getElementById('filter-risk').value;
+  const url = `/analysis?limit=${HIST_LIMIT}&offset=${histOffset}${risk ? '&risk='+risk : ''}`;
+  try {
+    const r = await authFetch(url);
+    const d = await r.json();
+    document.getElementById('hist-count').textContent = `Showing ${histOffset+1}–${Math.min(histOffset+HIST_LIMIT, d.total)} of ${d.total}`;
+    document.getElementById('hist-prev').disabled = histOffset === 0;
+    document.getElementById('hist-next').disabled = histOffset + HIST_LIMIT >= d.total;
+    const tbody = document.getElementById('history-tbody');
+    if (!d.results?.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-row">No records found.</td></tr>'; return; }
+    tbody.innerHTML = d.results.map(row => `
+      <tr>
+        <td style="color:var(--muted);font-size:.8rem">${fmtDate(row.created_at)}</td>
+        <td title="${row.original_filename}">${truncate(row.original_filename,20)}</td>
+        <td><span style="font-size:.72rem;background:var(--surface2);padding:.1rem .4rem;border-radius:4px">${row.file_type}</span></td>
+        <td style="color:var(--muted)">${row.location||'—'}</td>
+        <td style="font-weight:600">${row.crowd_count}</td>
+        <td>${row.density||'—'}</td>
+        <td><span class="badge badge-${(row.risk_level||'').toLowerCase()}">${row.risk_level}</span></td>
+        <td>${row.risk_score}</td>
+        <td><button class="btn-ghost" onclick="openDetail('${row.id}')" style="font-size:.75rem;padding:.2rem .6rem">Detail</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { console.warn('History load failed', e); }
+}
+
+function histPage(dir) {
+  histOffset = Math.max(0, histOffset + dir * HIST_LIMIT);
+  loadHistory();
+}
+
+// ════════════════════════════════════════════════
+// ALERTS PAGE
+// ════════════════════════════════════════════════
+async function loadAlerts() {
+  try {
+    const [rHigh, rCrit] = await Promise.all([
+      authFetch('/analysis?limit=50&risk=High'),
+      authFetch('/analysis?limit=50&risk=Critical'),
+    ]);
+    const dH = await rHigh.json();
+    const dC = await rCrit.json();
+    const rows = [...(dC.results||[]), ...(dH.results||[])].sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
+    const tbody = document.getElementById('alerts-tbody');
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-row">No high risk events recorded. Good news! 🎉</td></tr>'; return; }
+    tbody.innerHTML = rows.map(row => `
+      <tr>
+        <td style="color:var(--muted);font-size:.8rem">${fmtDate(row.created_at)}</td>
+        <td title="${row.original_filename}">${truncate(row.original_filename,22)}</td>
+        <td style="color:var(--muted)">${row.location||'—'}</td>
+        <td style="font-weight:600;color:${row.risk_level==='Critical'?'var(--critical)':'var(--high)'}">${row.crowd_count}</td>
+        <td><span class="badge badge-${(row.risk_level||'').toLowerCase()}">${row.risk_level}</span></td>
+        <td>${row.risk_score}</td>
+        <td><button class="btn-ghost" onclick="openDetail('${row.id}')" style="font-size:.75rem;padding:.2rem .6rem">Detail</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { console.warn('Alerts load failed', e); }
+}
+
+// ════════════════════════════════════════════════
+// DETAIL MODAL
+// ════════════════════════════════════════════════
+async function openDetail(id) {
+  try {
+    const r = await authFetch('/analysis/' + id);
+    const d = await r.json();
+    if (!r.ok) { toast('Could not load detail', true); return; }
+
+    document.getElementById('modal-filename').textContent = d.original_filename || 'Analysis Detail';
+
+    if (d.heatmapUrl) {
+      document.getElementById('modal-heatmap').src = d.heatmapUrl;
+      document.getElementById('modal-heatmap-wrap').style.display = 'block';
+    } else {
+      document.getElementById('modal-heatmap-wrap').style.display = 'none';
+    }
+
+    const meta = [
+      ['Risk Level', `<span class="badge badge-${(d.risk_level||'').toLowerCase()}">${d.risk_level}</span>`],
+      ['Risk Score', d.risk_score + ' / 100'],
+      ['Crowd Count', d.crowd_count + ' people'],
+      ['Density', d.density],
+      ['Confidence', d.confidence > 0 ? (d.confidence*100).toFixed(1)+'%' : 'N/A (mock)'],
+      ['File Type', d.file_type],
+      ['Location', d.location || '—'],
+      ['Process Time', d.processing_time_ms + 'ms'],
+      ['Analysed At', fmtDate(d.created_at)],
+      ['Analysis ID', `<span style="font-size:.72rem;color:var(--muted)">${d.id}</span>`],
+    ];
+    if (d.heatmap_stats) {
+      meta.push(['Hotspots', d.heatmap_stats.hotspot_count]);
+      meta.push(['High Density %', d.heatmap_stats.high_density_pct + '%']);
+    }
+    document.getElementById('modal-meta').innerHTML = meta.map(([k,v]) =>
+      `<div class="meta-item"><div class="meta-key">${k}</div><div class="meta-val">${v}</div></div>`
+    ).join('');
+
+    if (d.flow_vectors?.length) {
+      document.getElementById('modal-flow').style.display = 'block';
+      document.getElementById('modal-flow-list').innerHTML = d.flow_vectors.slice(0,10).map(v =>
+        `<div style="padding:.2rem 0;border-bottom:1px solid var(--border)">x:${v.x} y:${v.y} → dx:${v.dx} dy:${v.dy} mag:<strong style="color:var(--accent)">${v.magnitude}</strong></div>`
+      ).join('');
+    } else {
+      document.getElementById('modal-flow').style.display = 'none';
+    }
+
+    document.getElementById('detail-modal').classList.add('open');
+  } catch(e) { toast('Failed to load detail', true); }
+}
+
+function closeModal() { document.getElementById('detail-modal').classList.remove('open'); }
+
+// ════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════
+async function authFetch(path, opts = {}) {
+  return fetch(API + path, { ...opts, headers: { Authorization: `Bearer ${TOKEN}`, ...(opts.headers||{}) } });
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+
+function truncate(str, n) { return str?.length > n ? str.slice(0, n) + '…' : str; }
+
+function toast(msg, isErr = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = isErr ? '#7f1d1d' : 'var(--border)';
+  t.style.color = isErr ? '#fca5a5' : 'var(--text)';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3500);
+}
+
+// Auto-refresh health every 30 seconds
+setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>

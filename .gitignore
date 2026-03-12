@@ -1,0 +1,24 @@
+# Secrets — NEVER commit
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# ML model weights (download separately)
+ml/models/*.pt
+ml/models/*.pth
+
+# Temp files
+backend/tmp/
+
+# Build
+frontend/build/
+*.log
+.DS_Store
+Thumbs.db
