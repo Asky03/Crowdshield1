@@ -161,7 +161,7 @@ tr:hover td{background:var(--surface2)}
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">
-      <h1><span style="background:linear-gradient(135deg,#4f8ef7,#7c6af7);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CrowdShield</span></h1>
+      <h1>🛡️ <span style="background:linear-gradient(135deg,#4f8ef7,#7c6af7);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CrowdShield</span></h1>
       <p>Crowd Safety Monitoring System</p>
     </div>
     <div id="reg-name-group" class="form-group" style="display:none">
@@ -191,7 +191,7 @@ tr:hover td{background:var(--surface2)}
 <div id="app-screen">
   <!-- Topbar -->
   <div class="topbar">
-    <div class="logo"> <span>CrowdShield</span></div>
+    <div class="logo">🛡️ <span>CrowdShield</span></div>
     <div class="pill"><div class="dot" id="top-dot"></div><span id="top-status">connecting...</span></div>
     <div class="topbar-right">
       <div class="user-chip" id="user-chip">—</div>
@@ -420,7 +420,7 @@ tr:hover td{background:var(--surface2)}
      JAVASCRIPT
 ══════════════════════════════════════════════════════════ -->
 <script>
-const API = 'http://localhost:5000/api';
+const API = 'http://localhost:5500/api';
 let TOKEN = localStorage.getItem('cs_token');
 let currentUser = null;
 let isRegMode = false;
