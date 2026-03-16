@@ -1,61 +1,68 @@
 @echo off
-title CrowdShield Launcher
+title CrowdShield
 color 0A
+cls
 
 echo.
-echo  ============================================
-echo   CrowdShield - Starting All Services
-echo  ============================================
+echo  ==========================================
+echo   CrowdShield - Starting Up
+echo  ==========================================
 echo.
 
-:: Check if .env exists
-if not exist "backend\.env" (
-  echo  ERROR: backend\.env file not found!
-  echo  Run: cd backend then copy .env.example .env
-  echo  Fill in your keys then run this again.
-  pause
-  exit /b 1
+:: ── Check .env exists ──────────────────────────────────────────
+if not exist "%~dp0backend\.env" (
+  echo  ERROR: backend\.env not found!
+  echo  Please create it: cd backend then copy .env.example .env
+  pause & exit /b 1
 )
 
-:: Install node packages if missing
-if not exist "backend\node_modules" (
-  echo  Installing backend packages...
-  cd backend && npm install && cd ..
+:: ── Install node_modules if missing ───────────────────────────
+if not exist "%~dp0backend\node_modules" (
+  echo  Installing backend packages (one time only)...
+  cd /d "%~dp0backend"
+  npm install
+  cd /d "%~dp0"
   echo.
 )
 
-:: Setup Python venv if missing
-if not exist "ml\venv" (
-  echo  Creating Python venv and installing packages (3-5 min)...
-  cd ml
+:: ── Create Python venv if missing ─────────────────────────────
+if not exist "%~dp0ml\venv" (
+  echo  Setting up Python environment (one time only)...
+  cd /d "%~dp0ml"
   python -m venv venv
   call venv\Scripts\activate.bat
   pip install -r requirements.txt
-  cd ..
+  cd /d "%~dp0"
   echo.
 )
 
-echo  Starting Backend on port 5500...
-start "CrowdShield Backend" cmd /k "cd /d %~dp0backend && npm run dev"
+:: ── Start Backend ──────────────────────────────────────────────
+echo  [1/3] Starting Backend on port 5000...
+start "CrowdShield Backend" cmd /k "title CrowdShield Backend && cd /d %~dp0backend && npm run dev"
 
-echo  Waiting for backend...
+:: Wait for backend to boot
+timeout /t 4 /nobreak >nul
+
+:: ── Start ML Service ───────────────────────────────────────────
+echo  [2/3] Starting ML Service on port 8000...
+start "CrowdShield ML" cmd /k "title CrowdShield ML && cd /d %~dp0ml && call venv\Scripts\activate.bat && uvicorn app:app --host 0.0.0.0 --port 8000 --reload"
+
 timeout /t 3 /nobreak >nul
 
-echo  Starting ML Service on port 8000...
-start "CrowdShield ML" cmd /k "cd /d %~dp0ml && call venv\Scripts\activate.bat && uvicorn app:app --host 0.0.0.0 --port 8000 --reload"
-
-echo  Waiting for ML to load...
-timeout /t 5 /nobreak >nul
-
-echo  Opening Dashboard...
+:: ── Open Dashboard ─────────────────────────────────────────────
+echo  [3/3] Opening Dashboard...
 start "" "%~dp0frontend\index.html"
 
 echo.
-echo  ============================================
-echo   All services started!
+echo  ==========================================
+echo   DONE! Two terminal windows opened.
 echo.
-echo   Health check: http://localhost:5500/api/health
-echo   Dashboard:    frontend\index.html
-echo  ============================================
+echo   Backend:   http://localhost:5000/api/health
+echo   ML:        http://localhost:8000/health
+echo   Dashboard: Your browser just opened it
 echo.
-pause >nul
+echo   DO NOT close the backend/ML terminals.
+echo   This window can be closed.
+echo  ==========================================
+echo.
+pause
