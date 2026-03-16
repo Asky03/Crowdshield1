@@ -179,6 +179,9 @@ tr:hover td{background:var(--surface2)}
     </div>
     <div class="err-msg" id="auth-err"></div>
     <button class="btn" id="auth-btn" style="width:100%;margin-top:.5rem" onclick="authAction()">Login</button>
+    <div class="auth-toggle" id="forgot-wrap">
+      <a onclick="showForgot()" style="color:#8892a4;font-size:.8rem">Forgot password?</a>
+    </div>
     <div class="auth-toggle">
       <a onclick="toggleAuth()" id="auth-switch">Don't have an account? Register</a>
     </div>
@@ -194,7 +197,7 @@ tr:hover td{background:var(--surface2)}
     <div class="logo">🛡️ <span>CrowdShield</span></div>
     <div class="pill"><div class="dot" id="top-dot"></div><span id="top-status">connecting...</span></div>
     <div class="topbar-right">
-      <div class="user-chip" id="user-chip">—</div>
+      <div class="user-chip" id="user-chip">—</div><span id="role-badge" style="display:none;font-size:.7rem;padding:.2rem .6rem;border-radius:999px;font-weight:700"></span>
       <button class="btn-ghost" onclick="logout()" style="font-size:.8rem;padding:.3rem .8rem">Logout</button>
     </div>
   </div>
@@ -350,7 +353,7 @@ tr:hover td{background:var(--surface2)}
 
       <div class="card">
         <div class="card-title">
-          All Analyses
+          <span>All Analyses <span id="hist-view-label" style="font-size:.72rem;color:#8892a4;font-weight:400"></span></span>
           <div style="display:flex;gap:.6rem;align-items:center">
             <select id="filter-risk" onchange="loadHistory()" style="font-size:.8rem;padding:.3rem .6rem;border-radius:6px">
               <option value="">All Risk Levels</option>
@@ -414,6 +417,19 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+<!-- FORGOT PASSWORD MODAL -->
+<div id="forgot-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center">
+  <div style="background:#141624;border:1px solid #252842;border-radius:16px;padding:2rem;max-width:400px;width:90%">
+    <div style="font-size:1rem;font-weight:700;margin-bottom:.5rem">Reset Password</div>
+    <p style="font-size:.83rem;color:#8892a4;margin-bottom:1rem">Enter your email and we will send you a reset link.</p>
+    <input type="email" id="forgot-email" placeholder="your@email.com" style="width:100%;background:#0d0f1a;border:1px solid #252842;color:#e2e8f0;padding:.65rem .9rem;border-radius:8px;font-size:.9rem;margin-bottom:.8rem"/>
+    <div id="forgot-msg" style="font-size:.82rem;min-height:1.2rem;margin-bottom:.6rem"></div>
+    <div style="display:flex;gap:.7rem">
+      <button onclick="sendForgot()" style="flex:1;background:#4f8ef7;color:#fff;border:none;border-radius:8px;padding:.6rem;font-weight:600;cursor:pointer">Send Reset Link</button>
+      <button onclick="closeForgot()" style="background:transparent;border:1px solid #252842;color:#8892a4;border-radius:8px;padding:.6rem .9rem;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <!-- ══════════════════════════════════════════════════════════
@@ -421,7 +437,6 @@ tr:hover td{background:var(--surface2)}
 ══════════════════════════════════════════════════════════ -->
 <script>
 const API = 'http://localhost:5000/api';
-//const API = 'https://your-backend.railway.app/api';//
 let TOKEN = localStorage.getItem('cs_token');
 let currentUser = null;
 let isRegMode = false;
@@ -436,7 +451,11 @@ let lastAnalysisId = null;
 // INIT
 // ════════════════════════════════════════════════
 window.onload = () => {
-  if (TOKEN) initApp();
+  if (TOKEN) {
+    const saved = localStorage.getItem('cs_user');
+    if (saved) { try { currentUser = JSON.parse(saved); } catch{} }
+    initApp();
+  }
 };
 
 async function initApp() {
@@ -444,7 +463,24 @@ async function initApp() {
   document.getElementById('app-screen').style.display = 'block';
   checkHealth();
   refreshDashboard();
-  if (currentUser) document.getElementById('user-chip').textContent = currentUser.email;
+  if (currentUser) {
+    document.getElementById('user-chip').textContent = currentUser.email;
+    const badge = document.getElementById('role-badge');
+    const isAdmin = currentUser.role === 'admin';
+    badge.textContent = isAdmin ? 'ADMIN' : 'OPERATOR';
+    badge.style.display = 'inline';
+    badge.style.background = isAdmin ? 'rgba(124,106,247,.2)' : 'rgba(79,142,247,.15)';
+    badge.style.color = isAdmin ? '#a78bfa' : '#60a5fa';
+    // Show admin note in dashboard if admin
+    if (isAdmin) {
+      const note = document.createElement('div');
+      note.id = 'admin-note';
+      note.style.cssText = 'background:#1a1040;border:1px solid #4c1d95;border-radius:8px;padding:.6rem 1rem;font-size:.82rem;color:#a78bfa;margin-bottom:1rem';
+      note.innerHTML = "👑 Admin view — showing all users analyses across the system";
+      const pg = document.getElementById('page-dashboard');
+      if (pg && !document.getElementById('admin-note')) pg.insertBefore(note, pg.firstChild);
+    }
+  }
 }
 
 // ════════════════════════════════════════════════
@@ -455,6 +491,9 @@ function toggleAuth() {
   document.getElementById('auth-btn').textContent = isRegMode ? 'Create Account' : 'Login';
   document.getElementById('auth-switch').textContent = isRegMode ? 'Already have an account? Login' : "Don't have an account? Register";
   document.getElementById('reg-name-group').style.display = isRegMode ? 'block' : 'none';
+  // Hide forgot password in register mode
+  const fw = document.getElementById('forgot-wrap');
+  if (fw) fw.style.display = isRegMode ? 'none' : 'block';
   clearErr();
 }
 
@@ -488,6 +527,7 @@ async function authAction() {
     if (!TOKEN) { showErr('No session returned — check Supabase email confirmation is disabled'); return; }
 
     localStorage.setItem('cs_token', TOKEN);
+    localStorage.setItem('cs_user', JSON.stringify(d.user));
     currentUser = d.user;
     document.getElementById('user-chip').textContent = d.user.email;
     initApp();
@@ -499,9 +539,39 @@ async function authAction() {
   }
 }
 
+// ── Forgot Password ─────────────────────────────────────────────
+function showForgot() {
+  document.getElementById('forgot-modal').style.display = 'flex';
+  document.getElementById('forgot-msg').textContent = '';
+  document.getElementById('forgot-email').value = '';
+}
+function closeForgot() {
+  document.getElementById('forgot-modal').style.display = 'none';
+}
+async function sendForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const msgEl = document.getElementById('forgot-msg');
+  if (!email) { msgEl.style.color='#f87171'; msgEl.textContent='Email is required'; return; }
+  msgEl.style.color='#8892a4'; msgEl.textContent='Sending...';
+  try {
+    const r = await fetch(API + '/auth/forgot-password', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email }),
+    });
+    const d = await r.json();
+    msgEl.style.color='#22c55e';
+    msgEl.textContent = d.message || 'Reset link sent! Check your inbox.';
+    setTimeout(closeForgot, 3000);
+  } catch {
+    msgEl.style.color='#f87171';
+    msgEl.textContent='Network error — is the backend running?';
+  }
+}
+
 function logout() {
   TOKEN = null; currentUser = null;
   localStorage.removeItem('cs_token');
+  localStorage.removeItem('cs_user');
   document.getElementById('app-screen').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
 }
@@ -740,6 +810,8 @@ async function loadHistory() {
   try {
     const r = await authFetch(url);
     const d = await r.json();
+    const vl = document.getElementById('hist-view-label');
+    if (vl) vl.textContent = d.viewAs === 'admin' ? '(all users)' : '(your uploads only)';
     document.getElementById('hist-count').textContent = `Showing ${histOffset+1}–${Math.min(histOffset+HIST_LIMIT, d.total)} of ${d.total}`;
     document.getElementById('hist-prev').disabled = histOffset === 0;
     document.getElementById('hist-next').disabled = histOffset + HIST_LIMIT >= d.total;
