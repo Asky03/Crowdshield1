@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { body } = require('express-validator');
-const { register, login, refresh, getMe } = require('../controllers/auth.controller');
+const { register, login, refresh, forgotPassword, getMe } = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
 router.post('/register', [
@@ -8,8 +8,8 @@ router.post('/register', [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
   body('password')
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-    .matches(/[A-Z]/).withMessage('Password must contain an uppercase letter')
-    .matches(/[0-9]/).withMessage('Password must contain a number'),
+    .matches(/[A-Z]/).withMessage('Must contain an uppercase letter')
+    .matches(/[0-9]/).withMessage('Must contain a number'),
 ], register);
 
 router.post('/login', [
@@ -18,6 +18,10 @@ router.post('/login', [
 ], login);
 
 router.post('/refresh', refresh);
+
+// Forgot password — sends reset email via Supabase
+router.post('/forgot-password', forgotPassword);
+
 router.get('/me', authenticate, getMe);
 
 module.exports = router;
