@@ -1,0 +1,52 @@
+# render.yaml
+# ─────────────────────────────────────────────────────────────────
+# Deploys CrowdShield backend to Render.com
+# Place this file in the ROOT of your project (CROWD-CLAUDE folder)
+#
+# How to use:
+#   1. Push your code to GitHub
+#   2. Go to render.com → New → Blueprint
+#   3. Connect your GitHub repo
+#   4. Render reads this file and sets everything up automatically
+#   5. Set your environment variables in Render dashboard
+# ─────────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: crowdshield-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # Set these in Render dashboard — DO NOT put real values here
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: AWS_SNS_TOPIC_ARN
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: ML_SERVICE_URL
+        sync: false
+      - key: MAX_FILE_SIZE_MB
+        value: 100

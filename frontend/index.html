@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CrowdShield — Dashboard</title>
+<script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -436,7 +437,15 @@ tr:hover td{background:var(--surface2)}
      JAVASCRIPT
 ══════════════════════════════════════════════════════════ -->
 <script>
-const API = 'http://localhost:5000/api';
+// Auto-detect backend URL
+// Local: uses localhost:5000
+// Production (Vercel): uses BACKEND_URL env injected at build, or window config
+const API = (() => {
+  // If running on Vercel/production, window.CROWDSHIELD_API is set by config.js
+  if (window.CROWDSHIELD_API) return window.CROWDSHIELD_API;
+  // Local development fallback
+  return 'http://localhost:5000/api';
+})();
 let TOKEN = localStorage.getItem('cs_token');
 let currentUser = null;
 let isRegMode = false;

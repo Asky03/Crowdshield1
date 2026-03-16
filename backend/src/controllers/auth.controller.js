@@ -10,18 +10,31 @@ const register = async (req, res) => {
   if (!errs.isEmpty()) return res.status(400).json({ errors: errs.array() });
 
   const { email, password, name } = req.body;
+
+  // ── Admin whitelist check ──────────────────────────────────────
+  // ADMIN_EMAILS is a comma-separated list in .env
+  // e.g. ADMIN_EMAILS=admin@yourdomain.com,boss@yourdomain.com
+  const adminEmails = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  const isAdminEmail = adminEmails.includes(email.toLowerCase());
+  const role = isAdminEmail ? 'admin' : 'operator';
+
   const { data, error } = await anonClient().auth.signUp({
     email, password,
-    options: { data: { name, role: 'operator' } },
+    options: { data: { name, role } },
   });
 
   if (error) {
-    return res.status(error.message.includes('already') ? 409 : 400).json({ error: error.message });
+    return res.status(error.message.includes('already') ? 409 : 400)
+      .json({ error: error.message });
   }
 
   res.status(201).json({
     message: 'Registered successfully.',
-    user: { id: data.user.id, email: data.user.email, name },
+    user: { id: data.user.id, email: data.user.email, name, role },
     access_token: data.session?.access_token || null,
     session: data.session,
   });
@@ -59,28 +72,32 @@ const refresh = async (req, res) => {
   const { data, error } = await anonClient().auth.refreshSession({ refresh_token });
   if (error) return res.status(401).json({ error: 'Invalid refresh token' });
 
-  res.json({ access_token: data.session.access_token, expires_at: data.session.expires_at });
+  res.json({
+    access_token: data.session.access_token,
+    expires_at:   data.session.expires_at,
+  });
 };
 
 // POST /api/auth/forgot-password
-// Supabase sends a password reset email automatically
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
-  // redirectTo is where Supabase sends the user after they click the reset link
-  // For local dev we use localhost — change this to your domain in production
+  // FRONTEND_URL must be set in .env
+  // Local:  http://localhost:5000  (or wherever you serve the HTML)
+  // Prod:   https://your-app.vercel.app
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5000';
+  const redirectTo  = `${frontendUrl}/reset-password.html`;
+
   const { error } = await anonClient().auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5500'}/reset-password.html`,
+    redirectTo,
   });
 
-  // Always return success — never reveal if an email exists (security)
-  if (error) {
-    console.error('Password reset error:', error.message);
-  }
+  if (error) console.error('Password reset error:', error.message);
 
+  // Always return 200 — never reveal if email exists
   res.json({
-    message: 'If that email is registered, a password reset link has been sent. Check your inbox.',
+    message: 'If that email is registered, a reset link has been sent. Check your inbox.',
   });
 };
 
