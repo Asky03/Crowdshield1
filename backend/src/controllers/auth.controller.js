@@ -20,9 +20,8 @@ const register = async (req, res) => {
   }
 
   res.status(201).json({
-    message: 'Registered! If email confirmation is enabled, check your inbox.',
+    message: 'Registered successfully.',
     user: { id: data.user.id, email: data.user.email, name },
-    // session is null when email confirmation is required
     access_token: data.session?.access_token || null,
     session: data.session,
   });
@@ -63,7 +62,29 @@ const refresh = async (req, res) => {
   res.json({ access_token: data.session.access_token, expires_at: data.session.expires_at });
 };
 
+// POST /api/auth/forgot-password
+// Supabase sends a password reset email automatically
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  // redirectTo is where Supabase sends the user after they click the reset link
+  // For local dev we use localhost — change this to your domain in production
+  const { error } = await anonClient().auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5500'}/reset-password.html`,
+  });
+
+  // Always return success — never reveal if an email exists (security)
+  if (error) {
+    console.error('Password reset error:', error.message);
+  }
+
+  res.json({
+    message: 'If that email is registered, a password reset link has been sent. Check your inbox.',
+  });
+};
+
 // GET /api/auth/me
 const getMe = (req, res) => res.json({ user: req.user });
 
-module.exports = { register, login, refresh, getMe };
+module.exports = { register, login, refresh, forgotPassword, getMe };
